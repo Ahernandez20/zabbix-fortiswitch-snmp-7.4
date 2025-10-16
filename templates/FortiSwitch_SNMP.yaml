@@ -20,7 +20,7 @@ zabbix_export:
         
           ✅ **Requisito**: configurar un timeout de 30 segundos en la interfaz SNMP del host FortiGate en Zabbix.
           ✅ **Ideal para**: entornos empresariales con alta disponibilidad, donde solo importan las caídas de dispositivos reales, no los puertos libres.
-              vendor:
+      vendor:
         name: SISTYC PANAMA
         version: '3.0'
       groups:
