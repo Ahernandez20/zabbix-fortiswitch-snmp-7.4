@@ -1,0 +1,237 @@
+zabbix_export:
+  version: '7.0'
+  template_groups:
+    - uuid: 36bff6c29af64692839d077febfc7079
+      name: 'Templates/Network devices'
+  templates:
+    - uuid: a1b2c3d4e5f64210ba9876543210fedc
+      template: 'FortiSwitch SNMP'
+      name: 'FortiSwitch SNMP'
+      description: |
+          Este template monitorea de forma automática y segura los FortiSwitches gestionados por un FortiGate mediante SNMPv3.
+        
+          🔹 **Descubrimiento automático**: detecta todos los switches conectados por FortiLink y sus puertos (port1, port2, etc.).
+          🔹 **Monitoreo esencial**: estado, uso de CPU y memoria por switch.
+          🔹 **Alertas inteligentes**: solo notifica si un puerto que **estaba activo (up)** pasa a **inactivo (down)**. 
+              → Los puertos que siempre han estado libres (sin dispositivo conectado) **nunca generan alertas**.
+          🔹 **Nombres claros**: los items se muestran como "Switch S124FNTF24011785 port5: Status", sin redundancias.
+          🔹 **Escalable**: diseñado para entornos grandes (cientos de FortiGates, miles de puertos) sin configuración manual por puerto.
+          🔹 **Seguro**: funciona con SNMPv3 (cifrado) y no requiere credenciales adicionales en los switches.
+        
+          ✅ **Requisito**: configurar un timeout de 30 segundos en la interfaz SNMP del host FortiGate en Zabbix.
+          ✅ **Ideal para**: entornos empresariales con alta disponibilidad, donde solo importan las caídas de dispositivos reales, no los puertos libres.
+              vendor:
+        name: SISTYC PANAMA
+        version: '3.0'
+      groups:
+        - name: 'Templates/Network devices'
+      items:
+        - uuid: b2c3d4e5f6a74890b234567890123456
+          name: 'SNMP walk - Switch devices'
+          type: SNMP_AGENT
+          snmp_oid: 'walk[1.3.6.1.4.1.12356.101.24.1.1]'
+          key: fsw.dev.walk
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 30s
+          tags:
+            - tag: component
+              value: raw
+        - uuid: c3d4e5f6a7b84901b234567890123457
+          name: 'SNMP walk - Port table'
+          type: SNMP_AGENT
+          snmp_oid: 'walk[1.3.6.1.4.1.12356.101.24.2.1]'
+          key: fsw.port.table.walk
+          history: '0'
+          value_type: TEXT
+          trends: '0'
+          timeout: 30s
+          tags:
+            - tag: component
+              value: raw
+      discovery_rules:
+        - uuid: d4e5f6a7b8c94012b234567890123458
+          name: 'FortiSwitch discovery'
+          type: DEPENDENT
+          key: fsw.switch.discovery
+          delay: '1h'
+          master_item:
+            key: fsw.dev.walk
+          preprocessing:
+            - type: SNMP_WALK_TO_JSON
+              parameters:
+                - '{#FSW_SERIAL}'
+                - '1.3.6.1.4.1.12356.101.24.1.1.1.3'
+                - '0'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 2h
+          item_prototypes:
+            - uuid: e5f6a7b8c9d04123b234567890123459
+              name: 'Switch {#FSW_SERIAL}: Status'
+              type: DEPENDENT
+              key: 'fsw.dev.status[{#FSW_SERIAL}]'
+              delay: '5m'
+              trends: '0'
+              valuemap:
+                name: 'FortiSwitch device status'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.12356.101.24.1.1.1.7.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: fsw.dev.walk
+              tags:
+                - tag: Device
+                  value: FortiSwitch
+                - tag: switch_serial
+                  value: '{#FSW_SERIAL}'
+              trigger_prototypes:
+                - uuid: f6a7b8c9d0e14234b23456789012345a
+                  expression: 'last(/FortiSwitch SNMP/fsw.dev.status[{#FSW_SERIAL}])=0'
+                  name: 'FortiSwitch {#FSW_SERIAL} is offline'
+                  priority: HIGH
+                  description: 'El switch no está respondiendo.'
+                  tags:
+                    - tag: scope
+                      value: availability
+            - uuid: a7b8c9d0e1f24345b23456789012345b
+              name: 'Switch {#FSW_SERIAL}: CPU usage'
+              type: DEPENDENT
+              key: 'fsw.dev.cpu[{#FSW_SERIAL}]'
+              delay: '5m'
+              value_type: FLOAT
+              units: '%'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.12356.101.24.1.1.1.11.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: fsw.dev.walk
+              tags:
+                - tag: Device
+                  value: FortiSwitch
+                - tag: switch_serial
+                  value: '{#FSW_SERIAL}'
+            - uuid: b8c9d0e1f2a34456b23456789012345c
+              name: 'Switch {#FSW_SERIAL}: Memory usage'
+              type: DEPENDENT
+              key: 'fsw.dev.mem[{#FSW_SERIAL}]'
+              delay: '5m'
+              value_type: FLOAT
+              units: '%'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.12356.101.24.1.1.1.12.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: fsw.dev.walk
+              tags:
+                - tag: Device
+                  value: FortiSwitch
+                - tag: switch_serial
+                  value: '{#FSW_SERIAL}'
+
+        - uuid: c9d0e1f2a3b44567b23456789012345d
+          name: 'FortiSwitch port discovery'
+          type: DEPENDENT
+          key: fsw.port.discovery
+          delay: '1h'
+          master_item:
+            key: fsw.port.table.walk
+          preprocessing:
+            - type: SNMP_WALK_TO_JSON
+              parameters:
+                - '{#FSW_SERIAL}'
+                - '1.3.6.1.4.1.12356.101.24.2.1.1.4'
+                - '0'
+                - '{#PORT_NAME}'
+                - '1.3.6.1.4.1.12356.101.24.2.1.1.5'
+                - '0'
+              error_handler: DISCARD_VALUE
+            - type: DISCARD_UNCHANGED_HEARTBEAT
+              parameters:
+                - 2h
+          item_prototypes:
+            - uuid: d0e1f2a3b4c54678b23456789012345e
+              name: 'Switch {#FSW_SERIAL} {#PORT_NAME}: Status'
+              type: DEPENDENT
+              key: 'fsw.port.status[{#FSW_SERIAL}:{#SNMPINDEX}]'
+              delay: '5m'
+              trends: '0'
+              valuemap:
+                name: 'FortiSwitch port status'
+              preprocessing:
+                - type: SNMP_WALK_VALUE
+                  parameters:
+                    - '1.3.6.1.4.1.12356.101.24.2.1.1.6.{#SNMPINDEX}'
+                    - '0'
+              master_item:
+                key: fsw.port.table.walk
+              tags:
+                - tag: Device
+                  value: FortiSwitch
+                - tag: switch_serial
+                  value: '{#FSW_SERIAL}'
+                - tag: port_name
+                  value: '{#PORT_NAME}'
+              trigger_prototypes:
+                - uuid: e1f2a3b4c5d64789b23456789012345f
+                  expression: |
+                    (last(/FortiSwitch SNMP/fsw.port.status[{#FSW_SERIAL}:{#SNMPINDEX}])=0 or last(/FortiSwitch SNMP/fsw.port.status[{#FSW_SERIAL}:{#SNMPINDEX}])=2)
+                    and
+                    last(/FortiSwitch SNMP/fsw.port.status[{#FSW_SERIAL}:{#SNMPINDEX}],#2)=1
+                  name: '{#PORT_NAME} down on switch {#FSW_SERIAL}'
+                  priority: AVERAGE
+                  description: 'Alerta solo si el puerto estaba up (1) y ahora está down (0 o 2). Los puertos siempre inactivos no generan alertas.'
+                  manual_close: 'NO'
+                  tags:
+                    - tag: scope
+                      value: availability
+
+      valuemaps:
+        - uuid: a3b4c5d6e7f84901b234567890123461
+          name: 'FortiSwitch device status'
+          mappings:
+            - value: '0'
+              newvalue: offline
+            - value: '1'
+              newvalue: online
+        - uuid: b4c5d6e7f8a94901b234567890123462
+          name: 'FortiSwitch port status'
+          mappings:
+            - value: '0'
+              newvalue: down
+            - value: '1'
+              newvalue: up
+            - value: '2'
+              newvalue: down
+            - value: '3'
+              newvalue: testing
+            - value: '4'
+              newvalue: unknown
+            - value: '5'
+              newvalue: dormant
+            - value: '6'
+              newvalue: notPresent
+            - value: '7'
+              newvalue: lowerLayerDown
+
+      tags:
+        - tag: Device
+          value: FortiSwitch
+        - tag: Type
+          value: Network
+        - tag: Source
+          value: FortiGate
+
+      macros:
+        - macro: '{$FSW.CPU.CRIT}'
+          value: '90'
+        - macro: '{$FSW.MEM.CRIT}'
+          value: '90'
