@@ -14,7 +14,7 @@ zabbix_export:
           🔹 **Monitoreo esencial**: estado, uso de CPU y memoria por switch.
           🔹 **Alertas inteligentes**: solo notifica si un puerto que **estaba activo (up)** pasa a **inactivo (down)**. 
               → Los puertos que siempre han estado libres (sin dispositivo conectado) **nunca generan alertas**.
-          🔹 **Nombres claros**: los items se muestran como "Switch S124FNTF24011785 port5: Status", sin redundancias.
+          🔹 **Nombres claros**: los items se muestran como "Switch S124FNTF2..... port5: Status", sin redundancias.
           🔹 **Escalable**: diseñado para entornos grandes (cientos de FortiGates, miles de puertos) sin configuración manual por puerto.
           🔹 **Seguro**: funciona con SNMPv3 (cifrado) y no requiere credenciales adicionales en los switches.
         
