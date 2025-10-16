@@ -1,0 +1,1 @@
+# zabbix-fortiswitch-snmp-7.4
